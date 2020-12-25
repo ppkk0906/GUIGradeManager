@@ -23,8 +23,7 @@ public class GradeTableModel extends AbstractTableModel{
 	private static final long serialVersionUID = 127756560822363832L;
 
 	static final String[] header = {"번호", "이름", "국어", "영어", "수학", "평균"};
-	private Vector<Double> average = new Vector<Double>();
-	private Vector<Grade> gradeList = new Vector<Grade>(); // 성적 클래스의 배열
+	private Vector<Object[]> gradeList = new Vector<Object[]>();
 
 	// 생성자: 인스턴스 1개 제한
 	private static GradeTableModel instance = new GradeTableModel();
@@ -57,7 +56,6 @@ public class GradeTableModel extends AbstractTableModel{
 				try {
 					// gradeList 초기화
 					this.gradeList.clear();
-					this.average.clear();
 					Stream<String> s = reader.lines(); // BufferedReader에 있는 모든 내용을 Stream으로 이동
 					Object[] oStream = s.toArray(); //Stream의 내용을 Object 배열 (stringStream)로 이동
 					for(int i = 1; i<oStream.length; i++) { 
@@ -76,8 +74,10 @@ public class GradeTableModel extends AbstractTableModel{
 							if(sArr[4] !=null) math = Integer.parseInt(sArr[4].trim());
 							Grade g = new Grade(studentNo, studentName, korean, english, math);
 							// 만들어진 Grade 클래스를 gradeList에 삽입
-							this.gradeList.add(g);
-							this.average.add(getAverage(i-1));
+							Object[] temp = new Object[2];
+							temp[0] = g;
+							temp[1] = getAverage(g);
+							this.gradeList.add(temp);
 						}
 					}
 				} catch (Exception e) {
@@ -94,11 +94,20 @@ public class GradeTableModel extends AbstractTableModel{
 
 	// 평균 구하기
 	public double getAverage(int row) {
-		Grade g = this.gradeList.get(row);
+		try {
+			Grade g = (Grade) this.gradeList.get(row)[0];
+			String s = String.format("%.1f", (g.korean+g.english+g.math)/3.0);
+			Double d = Double.parseDouble(s);
+			return d;
+		}catch(Exception e) {
+			return 0;
+		}
+
+	}
+	public double getAverage(Grade g) {
 		String s = String.format("%.1f", (g.korean+g.english+g.math)/3.0);
 		Double d = Double.parseDouble(s);
 		return d;
-
 	}
 
 	// 파일 저장하기
@@ -109,8 +118,13 @@ public class GradeTableModel extends AbstractTableModel{
 			writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), encoding));
 			writer.write("학생번호,학생이름,국어,영어,수학"+"\n");
 			for(int i = 0; i<gradeLen; i++) {
-				Grade g = gradeList.get(i);
-				writer.write(g.toString()+"\n");
+				try {
+					Grade g = (Grade) gradeList.get(i)[0];
+					writer.write(g.toString()+"\n");
+				}
+				catch (Exception e) {
+
+				}
 			}
 			writer.flush();
 		}catch(FileNotFoundException e) {
@@ -148,28 +162,74 @@ public class GradeTableModel extends AbstractTableModel{
 
 	@Override
 	public void setValueAt(Object aValue, int row, int column) {
-		Grade g = this.gradeList.get(row);
-		switch(column) {
-		case 0: g.studentNo = (int)aValue; fireTableCellUpdated(row, column); this.gradeList.set(row,g); break;
-		case 1: g.studentName = (String)aValue; fireTableCellUpdated(row, column); this.gradeList.set(row,g); break;
-		case 2: g.korean = (int)aValue; fireTableCellUpdated(row, column); this.gradeList.set(row,g); break;
-		case 3: g.english = (int)aValue; fireTableCellUpdated(row, column); this.gradeList.set(row,g); break;
-		case 4: g.math = (int)aValue; fireTableCellUpdated(row, column); this.gradeList.set(row,g); break;
-		case 5: this.average.set(row, (Double)aValue); break;
-		default: System.out.println("출력될 일이 없다");
+		try {
+			Object[] temp = this.gradeList.get(row);
+			Grade g = (Grade)temp[0];
+			switch(column) {
+			case 0: 
+				g.studentNo = (int)aValue;
+				temp[0] = g;
+				gradeList.set(row, temp);
+				fireTableCellUpdated(row, column); 
+				break;
+			case 1:
+				g.studentName = (String)aValue;
+				temp[0] = g;
+				gradeList.set(row, temp);
+				fireTableCellUpdated(row, column);
+				break;
+			case 2:
+				g.korean = (int)aValue;
+				temp[0] = g;
+				gradeList.set(row, temp);
+				fireTableCellUpdated(row, column);
+				break;
+			case 3:
+				g.english = (int)aValue;
+				temp[0] = g;
+				gradeList.set(row, temp);
+				fireTableCellUpdated(row, column);
+				break;
+			case 4: 
+				g.math = (int)aValue; 
+				temp[0] = g;
+				gradeList.set(row, temp);
+				fireTableCellUpdated(row, column);
+				break;
+			case 5: 
+				temp[1] = (Double)aValue;
+				gradeList.set(row, temp);
+				break;
+			default: System.out.println("출력될 일이 없다");
+			}
+		}catch (Exception e) {
+
 		}
 	}
 
 	@Override
 	public Object getValueAt(int rowIndex, int columnIndex) {
-		Grade g = this.gradeList.get(rowIndex);
-		switch(columnIndex) {
-		case 0: return g.studentNo;
-		case 1: return g.studentName;
-		case 2: return g.korean;
-		case 3: return g.english;
-		case 4: return g.math;
-		case 5: return average.get(rowIndex);
+		try {
+			System.out.printf("gradeList.get(%d)\n", rowIndex);
+			Object[] temp = gradeList.get(rowIndex);
+			Grade g = (Grade)temp[0];
+			switch(columnIndex) {
+			case 0: return g.studentNo;
+			case 1: return g.studentName;
+			case 2: return g.korean;
+			case 3: return g.english;
+			case 4: return g.math;
+			case 5: return temp[1];
+			}
+		}catch(Exception e) {
+			switch(columnIndex) {
+			case 0: return 0;
+			case 1: return "";
+			case 2: return 0;
+			case 3: return 0;
+			case 4: return 0;
+			case 5: return 1.0;
+			}
 		}
 		return null;
 	}
@@ -187,23 +247,21 @@ public class GradeTableModel extends AbstractTableModel{
 	}
 
 	public void addRow(int row, Grade rowData) {
-			gradeList.add(row+1, rowData);
-			int length = getRowCount();
-			average.clear();
-			for(int i = 0; i<length; i++) average.add(getAverage(i));
-			fireTableRowsInserted(0, getRowCount()-1);
+		Object temp[] = new Object[2];
+		temp[0] = rowData;
+		temp[1] = getAverage(rowData);
+		gradeList.add(row+1, temp);
+		fireTableRowsInserted(0, getRowCount()-1);
 
 	}
 
 	public void removeRow(int[] tmRows, int[] tbRows) {
-		ArrayList<Grade> tmRowsAL = new ArrayList<Grade>();
-		ArrayList<Double> tmRowsAL2 = new ArrayList<Double>();
+		Vector<Object[]> targets = new Vector<Object[]>();
 		for(int i: tmRows) {
-			tmRowsAL.add(gradeList.get(i)); 
-			tmRowsAL2.add(average.get(i));
+			Object[] temp= gradeList.get(i);
+			targets.add(temp);
 		}
-		gradeList.removeAll(tmRowsAL);
-		//average.removeAll(tmRowsAL2);
+		gradeList.removeAll(targets);
 		int minTbRow = Integer.MAX_VALUE;
 		int maxTbRow = Integer.MIN_VALUE;
 		for(int i: tbRows) {
